@@ -1,0 +1,20 @@
+<html><head>
+<style>
+html, body { margin:30px ; background: #ccc; }
+</style>
+</head>
+<body>
+<script>
+    queryString = window.location.search;
+    if( queryString == "" ) { queryString="?main" }
+    queryString = queryString.substr(1)
+    function l(u) { window.location.href=u+"?"+queryString; }
+</script>
+<h1> ID=<script>document.write(queryString);</script></h1>
+<h2>
+    <a href="javascript:l('left.html')">Left eye</a><br><br>
+    <a href="javascript:l('right.html')">Right eye</a> <br><br>
+    <a href="javascript:l('ctrl.html')">Controller</a> <br><br><br><br>
+</h2>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Touch Tracker Marker</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+<style type="text/css">
+body,html { margin: 0px; padding: 0px; overflow:hidden; }
+</style>
+</head>
+<body onresize="resize()" onload="resize()">
+<img id=backimg style="z-index:-10; top:0px; left:0px; positon:absolute; pointer-events:none;" src="ctrl.svg">
+<canvas id="canvas" width=100% height=100% style="top:0px; left:0px; position: absolute ;"></canvas>
+<script type="text/javascript">
+
+queryString = window.location.search;
+if( queryString == "" ) { queryString="?main" }
+queryString = queryString.substr(1)
+
+canvas  = document.getElementById('canvas');
+backimg = document.getElementById('backimg');
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    backimg.width = window.innerWidth;
+    backimg.height = window.innerHeight;
+}
+resize();
+
+//------------------------------------------------
+
+wslink="://"+window.location.hostname+":"+window.location.port+"/send?id="+queryString;
+
+if (window.location.protocol == "https:") {
+    wslink="s"+wslink;
+}
+wslink="ws"+wslink;
+console.log("wslink = "+wslink);
+
+//------------------------------------------------
+
+
+//websocket stuff
+sendstr=""
+lastsendstr=""
+tickcount=0;
+frametime=100;
+connected=true
+var ws = new WebSocket(wslink);
+ws.onmessage = function(e) {
+	console.log(event.data);
+}
+ws.onclose = function (error) {
+  console.log('WebSocket Error ' + error);
+  connected=false
+  document.getElementById("backimg").src = "discon.png";
+  clearTimeout(timer)
+};
+
+var canvas;
+var ctx;
+var w = 0;
+var h = 0;
+
+var timer;
+var updateStarted = false;
+var touches = [];
+
+var pos_dir='0,0',pos_lid='0,0';
+
+function update() {
+	if (! connected) return;
+	if (updateStarted) return;
+	updateStarted = true;
+
+    resize()
+	var nw = window.innerWidth;
+	var nh = window.innerHeight;
+
+	if ((w != nw) || (h != nh)) {
+		w = nw;
+		h = nh;
+		canvas.style.width = w+'px';
+		canvas.style.height = h+'px';
+		canvas.width = w;
+		canvas.height = h;
+	}
+
+	ctx.clearRect(0, 0, w, h);
+
+	var i, len = touches.length; 
+	tickcount++;
+	if ( len > 0 ) {
+		for ( i=0 ; i<len ; i++ ) {
+
+			var touch = touches[i];
+    		var px = touch.pageX;
+    		var py = touch.pageY;
+		
+			ctx.beginPath();
+			ctx.arc(px, py, 20, 0, 2*Math.PI, true);
+			ctx.fillStyle = "rgba(0, 0, 200, 0.2)";
+			ctx.fill();
+			ctx.lineWidth = 2.0;
+			ctx.strokeStyle = "rgba(0, 0, 200, 0.8)";
+			ctx.stroke();
+
+            var splitratio=0.67
+            var py=Math.round(((py/nh)*200)-100);
+            if( (px/nw) < splitratio ) {
+                //left control side
+                px=Math.round((((px/nw)/splitratio)*200)-100);
+				pos_dir=px+","+py;
+            } else {
+                //right control side
+				pos_lid="0,"+py;
+            }
+		}
+		sendstr=pos_dir+','+pos_lid;
+	
+		if( (tickcount*frametime) > 5000 || sendstr != lastsendstr ) {
+			ws.send(sendstr);
+			console.log(JSON.stringify({content:sendstr}));
+			tickcount=0;
+			lastsendstr=sendstr;
+		}
+	}
+
+	updateStarted = false;
+}
+
+
+ctx = canvas.getContext('2d');
+timer = setInterval(update, frametime);
+
+canvas.addEventListener('touchend', function() {
+	ctx.clearRect(0, 0, w, h);
+});
+
+canvas.addEventListener('touchmove', function(event) {
+ 		event.preventDefault();
+ 		touches = event.touches;
+});
+
+canvas.addEventListener('touchstart', function(event) {
+ 		console.log('start');
+});
+
+
+</script>
+</body>
+</html>
+

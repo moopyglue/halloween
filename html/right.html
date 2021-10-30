@@ -1,0 +1,142 @@
+<html><head>
+<style>
+html, body { height:100% ; margin:0 ; background: #ccc; overflow:hidden; }
+.eye  { position: absolute; left: 0px; top: 0px; width:100% ; }
+</style>
+<script type="text/javascript" src="qrcode.js"></script>
+</head>
+<body>
+<script>
+		UID = window.location.search;
+		if( UID == "" ) { UID="?main" }
+		UID = UID.substr(1)
+		console.log("UID = "+UID);
+</script>
+<div id=page class=eye></div>
+<h2>connecting as <script>document.write(UID)</script></h2>
+</div>
+<script>
+
+wslink="://"+window.location.hostname+":"+window.location.port+"/get?id="+UID;
+if (window.location.protocol == "https:") {
+    wslink="s"+wslink;
+}
+wslink="ws"+wslink;
+console.log("wslink = "+wslink);
+
+//------------------------------------------------
+
+open = 0.82 ; 
+updown = 0.5 ; 
+leftright = 0.5 ; 
+wavecount = 0 ; 
+xeyemod=0 ;
+yeyemod=0 ;
+eyemodsize=6 ;
+waittime=1000 ;
+frametime=50 ;
+
+
+var thisisleft = location.pathname.toString().match(/\/left.html/);
+if (thisisleft) {
+    side = "left";
+    elmod = 0 ;
+} else {
+    side = "right";
+    elmod = -60 ;
+}
+
+console.log(side+" - "+UID);
+
+function draweye () {
+
+	// wave count is a randomly increasing number, this is used as a seed
+	// for a sin wave which shows a slow natural flutter so the eyeball does not remain static
+	// - trying to make it seem more real
+	wavecount=wavecount+(Math.random()*0.5);
+
+    // calculate eye shape
+	str = "";
+	// This is the starting string which describes the black eye socket mask to overaly the eyeball.
+	if( side == "left" ) {
+		// ** LEFT **
+		// below numbering is to make it easier identify the vaue to be changed/used
+		//       1   2     4     5   6    7     9    10   11  12   
+		str = "M 100 700 Q 1100 -500 1820 650 Q 1050 1100 100 700 M 0 0 V 5000 H 1920 V -5000 H -1920";
+	} else { 
+		// ** RIGHT **
+		// below numbering is to make it easier identify the vaue to be changed/used
+		//       1    2     4    5   6   7     9   10   11   12   
+		str = "M 1820 700 Q 820 -500 100 650 Q 870 1100 1820 700 M 1920 0 V 5000 H -1920 V -5000 H 1920";
+	}
+	data=str.split(' ');
+	wopen = open + 0.007*(Math.sin(wavecount));
+	data[5] = Math.round(675 - (1175 * wopen)).toString();
+	data[10] = Math.round(675 + (425 * wopen)).toString();
+	str = data.join(' ');
+
+	// position eyeball
+	if( waittime < 0 ) {
+		xeyemod=Math.round(Math.sin(Math.random()*90)*eyemodsize);
+		yeyemod=Math.round(Math.sin(Math.random()*90)*eyemodsize);
+		waittime = waittime + 400 + ( Math.random() * 1000) ;
+	}
+    pagewidth=window.innerWidth;
+    eyesize=(900/1920)*pagewidth;
+
+	eyecoordx = Math.round( ((0.5-leftright) * 1100)+540+xeyemod+elmod ).toString() ;
+	eyecoordy = Math.round( ((0.5-updown) * 600)+150+yeyemod+(85*(1-open)) ).toString() ;
+
+	// write out the svg 
+	document.getElementById('page').innerHTML =
+        '<svg viewBox="0 0 1920 5000" width="100%" xmlns="http://www.w3.org/2000/svg" >' + 
+        '    <rect x=0 y=0 width=1920 height=1080 fill="#ffffaa" />' + 
+        '    <image x='+eyecoordx+' y='+eyecoordy+' width=900 height=900 xlink:href=iris3.png />' + 
+        '    <path d="' + str + '" stroke="none" fill="black"/>' + 
+        '</svg>';
+
+	// the sleep is 50 ms so that we see 20 frames a second
+	// in reality slightly slower because of the processing.
+	setTimeout(draweye,frametime);
+	waittime=waittime - frametime;
+}
+
+var ws = new WebSocket(wslink);
+var openeye ;
+
+ws.onmessage = function(e) {
+    var x = e.data.split(",");
+	if( openeye != "yes" ) {
+        draweye();
+        openeye = "yes";
+    }
+    if( x.length > 1 ) {
+
+        leftright = 0.5 - (x[0] / 300) ; 
+        updown = 0.5 - (x[1] / 300 ); 
+        if( x[3] > 0 ) { open = (((0-x[3])/100)+0.7); } else { open = (((0-x[3])/300)+0.7); }
+        console.log("leftright="+leftright+" updown="+updown+" open="+open);
+    } 
+}
+
+reconnect=false
+
+ws.onclose = function(e) {
+	setTimeout(refresh_page,5000)
+}
+
+ws.onerror = function(e) {
+	reconnect=true
+}
+
+function refresh_page() {
+	location.reload();
+}
+
+</script>
+</body>
+</html>
+
+</script>
+</body>
+</html>
