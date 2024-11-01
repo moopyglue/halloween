@@ -7,7 +7,7 @@ to make it uniqie externally.
 
 exmple runn from WSL or UNIX command line
 
-$ LISTEN_PORT=8080 ./halloween
+![screen snip](html/starting-halloween.png)
 
 ## compiling
 
