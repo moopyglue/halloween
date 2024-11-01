@@ -1,4 +1,4 @@
-# haloween
+# halloween
 
 Either just run the process and it will ldefault to listen on port 7777 or set env variable LIST_PORT to choose your own
 
